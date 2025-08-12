@@ -18,7 +18,8 @@
     --borda:#e5e7eb;
     --texto:#111;
   }
-  html,body{height:100%}
+  *{ box-sizing:border-box; }
+  html,body{ height:100% }
   body{
     font-family: monospace;
     margin:0; padding:0;
@@ -72,14 +73,19 @@
   /* ===== uploader (drag & drop) ===== */
   #uploader{ margin-top:8px; }
   .dropzone{
+    display:block; width:100%;
     border:2px dashed var(--azul);
-    border-radius:10px; padding:24px; text-align:center;
+    border-radius:12px; padding:28px; text-align:center;
     background:var(--cinza); color:#0b305a;
     cursor:pointer; user-select:none;
+    transition:.15s ease;
+    min-height:160px;
   }
-  .dropzone input{ display:none; }
+  .dropzone .title{ font-weight:700; margin-bottom:6px; font-size:14px; }
   .dropzone .hint{ font-size:12px; opacity:.8; }
-  .dropzone.dragover{ background:#eef6ff; border-style:solid; }
+  .dropzone.dragover{ background:#eef6ff; border-style:solid; transform:scale(1.01); }
+  /* esconde input, fica fora da label para evitar clique duplo */
+  #file-input{ position:absolute; left:-9999px; width:1px; height:1px; opacity:0; }
 
   /* ===== viewer ===== */
   #viewer{ display:none; }
@@ -122,12 +128,12 @@
   .btn-primaria{ background:#e8f2ff; border-color:#cfe2ff; color:#0b305a; }
   .btn-perigo{ background:var(--vermelho); color:#fff; border:none; }
 
-  /* aviso de cópia */
+  /* aviso/Toast (reaproveita o "Copiado!") */
   #copy-notice{
     position: fixed; right: 18px; bottom: 18px;
-    background: rgba(0,0,0,0.78); color: white;
-    padding: 8px 12px; border-radius: 6px;
-    display: none; z-index: 2000;
+    background: rgba(0,0,0,0.84); color: white;
+    padding: 9px 13px; border-radius: 8px;
+    display: none; z-index: 2000; font-size:12px;
   }
 
   /* ===== impressão ===== */
@@ -146,12 +152,12 @@
 <header>
   <!-- ESQUERDA -->
   <div class="menu-left">
-    <button class="icon-btn" title="Menu (☰)" onclick="toggleMenu('dropdown-menu')">☰</button>
     <div class="menu-dropdown">
+      <button class="icon-btn" title="Menu (☰)" onclick="toggleMenu('dropdown-menu')">☰</button>
       <div class="menu-dropdown-content" id="dropdown-menu">
-        <a href="#" onclick="alert('Página 1 (em breve)');return false;">Página 1 (em breve)</a>
-        <a href="#" onclick="alert('Página 2 (em breve)');return false;">Página 2 (em breve)</a>
-        <a href="#" onclick="alert('Página 3 (em breve)');return false;">Página 3 (em breve)</a>
+        <a href="#" onclick="showToast('Página 1 (em breve)');return false;">Página 1 (em breve)</a>
+        <a href="#" onclick="showToast('Página 2 (em breve)');return false;">Página 2 (em breve)</a>
+        <a href="#" onclick="showToast('Página 3 (em breve)');return false;">Página 3 (em breve)</a>
       </div>
     </div>
     <button class="icon-btn" title="Fechar (❌)" onclick="fecharPagina()">❌</button>
@@ -163,12 +169,12 @@
     <div class="menu-dropdown">
       <button class="icon-btn" id="btn-salvar" title="Salvar (💾)" onclick="toggleMenu('dropdown-save')">💾</button>
       <div class="menu-dropdown-content" id="dropdown-save" aria-labelledby="btn-salvar">
-        <a href="#" onclick="exportarXLSX();return false;">Salvar como XLSX</a>
-        <a href="#" onclick="exportarCSVAtivo();return false;">Salvar CSV (aba ativa)</a>
-        <a href="#" onclick="exportarJSON();return false;">Salvar como JSON</a>
+        <a href="#" onclick="exportarXLSX();fecharTodosMenus();return false;">Salvar como XLSX</a>
+        <a href="#" onclick="exportarCSVAtivo();fecharTodosMenus();return false;">Salvar CSV (aba ativa)</a>
+        <a href="#" onclick="exportarJSON();fecharTodosMenus();return false;">Salvar como JSON</a>
       </div>
     </div>
-    <button class="icon-btn" id="btn-print" title="Imprimir (🖨️)" onclick="window.print()">🖨️</button>
+    <button class="icon-btn" id="btn-print" title="Imprimir (🖨️)" onclick="imprimirAtual()">🖨️</button>
     <button class="icon-btn" id="btn-copy" title="Copiar (📋)" onclick="copiarTabelaAtiva()">📋</button>
   </div>
 </header>
@@ -181,10 +187,11 @@
 <div class="wrap">
   <!-- ===== Uploader ===== -->
   <section id="uploader" aria-label="Carregar planilha">
-    <label class="dropzone" id="dropzone">
-      <input id="file-input" type="file" accept=".ods,.xlsx,.xls,.csv" />
-      <div style="font-weight:700; margin-bottom:6px;">Arraste e solte seu arquivo .ods aqui</div>
-      <div class="hint">ou clique para selecionar do computador</div>
+    <!-- input fora da label para evitar diálogo duplo -->
+    <input id="file-input" type="file" accept=".ods,.xlsx,.xls,.csv" />
+    <label class="dropzone" id="dropzone" for="file-input">
+      <div class="title">Arraste e solte seu arquivo .ods aqui</div>
+      <div class="hint">ou clique nesta área para selecionar do computador</div>
     </label>
   </section>
 
@@ -213,7 +220,14 @@
 <div id="copy-notice">Copiado!</div>
 
 <script>
-/* ========= helpers visuais ========= */
+/* ========= helpers visuais / toasts ========= */
+function showToast(msg){
+  const el = document.getElementById('copy-notice');
+  el.textContent = msg;
+  el.style.display = 'block';
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(()=>{ el.style.display='none'; }, 1700);
+}
 function toggleMenu(id){
   document.querySelectorAll('.menu-dropdown-content').forEach(el=>{
     if(el.id !== id){ el.style.display='none'; el.style.opacity=0; }
@@ -223,14 +237,14 @@ function toggleMenu(id){
   if(el.style.display==='block'){ el.style.opacity=0; setTimeout(()=>el.style.display='none',180); }
   else{ el.style.display='block'; el.style.opacity=0; setTimeout(()=>el.style.opacity=1,10); }
 }
+function fecharTodosMenus(){
+  document.querySelectorAll('.menu-dropdown-content').forEach(el=>{ el.style.display='none'; el.style.opacity=0; });
+}
 document.addEventListener('click',(ev)=>{
-  if(!ev.target.closest('.menu-dropdown') && !ev.target.closest('#btn-salvar')){
-    document.querySelectorAll('.menu-dropdown-content').forEach(el=>{ el.style.display='none'; el.style.opacity=0; });
-  }
+  if(!ev.target.closest('.menu-dropdown')) fecharTodosMenus();
 });
 function fecharPagina(){ if(confirm('Fechar a página? (pode não funcionar em todos navegadores)')){ try{ window.close(); }catch(e){} } }
-function voltarMenu(){ alert('Voltar ao menu inicial (substitua por redirecionamento se quiser).'); }
-function mostrarAvisoCopia(){ const el=document.getElementById("copy-notice"); el.style.display="block"; setTimeout(()=>{ el.style.display="none"; }, 1600); }
+function voltarMenu(){ showToast('Voltar ao menu (configure o redirecionamento).'); }
 
 /* ========= estado ========= */
 let currentWB = null;         // workbook carregado
@@ -247,7 +261,6 @@ const sheets   = document.getElementById('sheets');
 const statusEl = document.getElementById('status');
 
 /* ========= drag & drop / seleção ========= */
-dropzone.addEventListener('click', ()=> fileInput.click());
 dropzone.addEventListener('dragover', (e)=>{ e.preventDefault(); dropzone.classList.add('dragover'); });
 dropzone.addEventListener('dragleave', ()=> dropzone.classList.remove('dragover'));
 dropzone.addEventListener('drop', (e)=>{
@@ -281,10 +294,10 @@ function processFile(file){
     }catch(err){
       console.error(err);
       statusEl.textContent = 'Erro ao ler o arquivo.';
-      alert('Não consegui abrir esse arquivo. Verifique se é um .ods/.xlsx válido.');
+      showToast('Não consegui abrir esse arquivo.');
     }
   };
-  reader.onerror = function(){ statusEl.textContent = 'Falha na leitura do arquivo.'; };
+  reader.onerror = function(){ statusEl.textContent = 'Falha na leitura do arquivo.'; showToast('Falha na leitura do arquivo.'); };
   reader.readAsArrayBuffer(file);
 }
 
@@ -330,24 +343,27 @@ function setActiveSheet(name){
 
 /* ========= exportações ========= */
 function exportarXLSX(){
-  if(!currentWB){ alert('Carregue um arquivo primeiro.'); return; }
+  if(!currentWB){ showToast('Nada para salvar.'); return; }
   const nome = (currentFileName || 'planilha') + '.xlsx';
   XLSX.writeFile(currentWB, nome);
+  showToast('Baixando XLSX…');
 }
 function exportarCSVAtivo(){
-  if(!currentWB || !activeSheetName){ alert('Carregue um arquivo e selecione uma aba.'); return; }
+  if(!currentWB || !activeSheetName){ showToast('Nenhuma aba ativa.'); return; }
   const ws = currentWB.Sheets[activeSheetName];
   const csv = XLSX.utils.sheet_to_csv(ws);
   downloadText(csv, sanitizeFileName(activeSheetName)+'.csv', 'text/csv;charset=utf-8;');
+  showToast('CSV gerado.');
 }
 function exportarJSON(){
-  if(!currentWB){ alert('Carregue um arquivo primeiro.'); return; }
+  if(!currentWB){ showToast('Nada para salvar.'); return; }
   const out = {};
   currentWB.SheetNames.forEach(name=>{
     const ws = currentWB.Sheets[name];
     out[name] = XLSX.utils.sheet_to_json(ws, { defval:null });
   });
   downloadText(JSON.stringify(out,null,2), (currentFileName||'planilha')+'.json', 'application/json;charset=utf-8;');
+  showToast('JSON gerado.');
 }
 function downloadText(content, filename, type){
   const blob = new Blob([content], { type });
@@ -362,10 +378,23 @@ function sanitizeFileName(s){ return (s||'').toString().replace(/[\\/:*?"<>|]+/g
 
 /* ========= copiar ========= */
 function copiarTabelaAtiva(){
-  if(!activeSheetName || !currentWB){ alert('Nada para copiar.'); return; }
+  if(!activeSheetName || !currentWB){ showToast('Nada para copiar.'); return; }
   const ws = currentWB.Sheets[activeSheetName];
   const tsv = XLSX.utils.sheet_to_csv(ws, { FS:"\t" });
-  navigator.clipboard.writeText(tsv).then(mostrarAvisoCopia).catch(()=>{});
+  navigator.clipboard.writeText(tsv).then(()=>showToast('Copiado!')).catch(()=>showToast('Não foi possível copiar.'));
+}
+
+/* ========= imprimir ========= */
+function hasConteudoImprimivel(){
+  if(!currentWB) return false;
+  const ativa = document.querySelector('.sheet.active table');
+  if(!ativa) return false;
+  // se tabela tiver pelo menos 1 célula útil
+  return ativa.querySelector('td,th') !== null;
+}
+function imprimirAtual(){
+  if(!hasConteudoImprimivel()){ showToast('Nada para imprimir.'); return; }
+  window.print();
 }
 
 /* ========= reset (fazer com outro) ========= */
@@ -388,9 +417,7 @@ function resetViewer(){
 /* ========= acessibilidade/UX ========= */
 document.addEventListener('keydown', (e)=>{
   // ESC fecha dropdowns
-  if(e.key === 'Escape'){
-    document.querySelectorAll('.menu-dropdown-content').forEach(el=>{ el.style.display='none'; el.style.opacity=0; });
-  }
+  if(e.key === 'Escape'){ fecharTodosMenus(); }
 });
 </script>
 </body>
