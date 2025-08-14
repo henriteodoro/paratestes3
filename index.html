@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Visualizador ODS — estilo MAC</title>
 
-<!-- SheetJS: lê .ods/.xlsx/.xls/.csv no navegador -->
+<!-- SheetJS: lê .ods/.xlsx no navegador -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
 <style>
@@ -19,7 +19,7 @@
     --texto:#111;
   }
   *{ box-sizing:border-box; }
-  html,body{ height:100% }
+  html,body{ height:100%; }
   body{
     font-family: monospace;
     margin:0; padding:0;
@@ -47,11 +47,14 @@
   }
   .icon-btn:hover{ background:rgba(255,255,255,.08) }
 
-  /* dropdowns */
+  /* dropdowns: left menu aligns left, right menu aligns right */
   .menu-dropdown{ position:relative; }
+  .menu-left .menu-dropdown-content { left: 0; right: auto; }
+  .menu-right .menu-dropdown-content { right: 0; left: auto; }
+
   .menu-dropdown-content{
     display:none; position:absolute; top:calc(100% + 6px);
-    right:0; background:#fff; color:#111; border-radius:6px;
+    background:#fff; color:#111; border-radius:6px;
     box-shadow:0 6px 18px rgba(0,0,0,.15);
     min-width:190px; overflow:auto; z-index:1200; padding:6px 0;
   }
@@ -67,8 +70,8 @@
   }
   .titulo-nav h1{ margin:0; font-size:18px; color:#111; }
 
-  /* ===== layout geral ===== */
-  .wrap{ max-width:1100px; margin:0 auto; padding:8px 14px 28px; }
+  /* ===== wrapper (usado para escala antes da impressão) ===== */
+  #main-wrapper.wrap{ max-width:1100px; margin:0 auto; padding:8px 14px 28px; }
 
   /* ===== uploader (drag & drop) ===== */
   #uploader{ margin-top:8px; }
@@ -77,15 +80,15 @@
     display:flex; flex-direction:column; align-items:center; justify-content:center;
     width:100%;
     border:2px dashed var(--azul);
-    border-radius:12px; padding:20px; text-align:center;
+    border-radius:12px; padding:28px; text-align:center;
     background:var(--cinza); color:#0b305a;
     cursor:pointer; user-select:none; transition:.15s ease;
-    min-height:200px;  /* mais alto para “encaixar” melhor o texto */
+    min-height:200px;
   }
   .dropzone .title{ font-weight:700; margin-bottom:6px; font-size:14px; }
   .dropzone .hint{ font-size:12px; opacity:.8; }
   .dropzone.dragover{ background:#eef6ff; border-style:solid; transform:scale(1.01); }
-  /* esconde input (fora da label para evitar diálogo duplo) */
+  /* input fora da label para evitar diálogo duplo */
   #file-input{ position:absolute; left:-9999px; width:1px; height:1px; opacity:0; }
 
   /* ===== viewer ===== */
@@ -129,7 +132,7 @@
   .btn-primaria{ background:#e8f2ff; border-color:#cfe2ff; color:#0b305a; }
   .btn-perigo{ background:var(--vermelho); color:#fff; border:none; }
 
-  /* aviso/Toast */
+  /* aviso/Toast (reaproveita o "Copiado!") */
   #copy-notice{
     position: fixed; right: 18px; bottom: 18px;
     background: rgba(0,0,0,0.84); color: white;
@@ -137,30 +140,31 @@
     display: none; z-index: 2000; font-size:12px;
   }
 
-  /* ===== impressão (focar em 1 página e evitar página em branco) ===== */
+  /* ===== impressão (estilos gerais) =====
+     Observação: a função JS 'prepareAndPrintSinglePage' aplica escala ao
+     #main-wrapper para garantir que tudo caiba em UMA página.
+  */
   @media print{
-    /* esconder tudo que não é conteúdo */
-    header, .menu-dropdown-content, #uploader, #copy-notice,
-    .viewer-footer, .tabs, .actions-top { display:none !important; }
-
-    html, body { background:#fff; height:auto !important; }
-    @page{ size:A4 portrait; margin:8mm; }
-
-    .wrap{ padding:0 !important; max-width:none !important; margin:0 !important; }
+    header, .menu-dropdown-content, #uploader, #copy-notice, .viewer-footer .btn, .menu-left .icon-btn, .menu-right .icon-btn { display:none !important; }
+    body, html { background:#fff; }
+    #main-wrapper.wrap{ padding:0 !important; max-width:none !important; margin:0 !important; }
     .sheets{ overflow:visible !important; border:none !important; }
     .sheet{ padding:0 !important; margin:0 !important; }
     .sheet table{ font-size:10px !important; border-collapse:collapse !important; }
-    .sheet th, .sheet td{ padding:2px 3px !important; }
-
-    /* garantir que só a aba ativa imprima */
-    .sheet{ display:none !important; }
-    .sheet.active{ display:block !important; }
-
-    /* leve redução global -> ajuda a evitar 2ª página vazia por arredondamentos */
-    body{ zoom:0.98; } /* Chrome/Edge */
-    /* fallback para outros navegadores: */
-    body{ -webkit-transform:scale(0.98); transform:scale(0.98); -webkit-transform-origin:top left; transform-origin:top left; }
+    .sheet th, .sheet td{ padding:3px 4px !important; }
+    .tabs, .actions-top, .viewer-footer { display:none !important; }
+    /* tentativa extra para evitar 2ª página vazia por arredondamentos:
+       reduz pequena escala em engines que respeitam zoom (Chrome/Edge). */
+    html.print-scaled, body.print-scaled { zoom:0.98; -webkit-print-color-adjust:exact; }
+    @page{ size:A4 portrait; margin:10mm; }
   }
+
+  /* classe para esconder elementos enquanto medimos via JS */
+  body.preparing-print header,
+  body.preparing-print #uploader,
+  body.preparing-print .menu-dropdown-content,
+  body.preparing-print .tabs,
+  body.preparing-print .viewer-footer { display:none !important; }
 </style>
 </head>
 <body>
@@ -190,7 +194,7 @@
         <a href="#" onclick="exportarJSON();fecharTodosMenus();return false;">Salvar como JSON</a>
       </div>
     </div>
-    <button class="icon-btn" id="btn-print" title="Imprimir (🖨️)" onclick="imprimirAtual()">🖨️</button>
+    <button class="icon-btn" id="btn-print" title="Imprimir (🖨️)" onclick="prepareAndPrintSinglePage()">🖨️</button>
     <button class="icon-btn" id="btn-copy" title="Copiar (📋)" onclick="copiarTabelaAtiva()">📋</button>
   </div>
 </header>
@@ -200,7 +204,8 @@
   <h1 id="titulo">Visualizador de Planilhas (.ods)</h1>
 </div>
 
-<div class="wrap">
+<!-- MAIN WRAPPER: a escala para impressão será aplicada aqui -->
+<div id="main-wrapper" class="wrap">
   <!-- ===== Uploader ===== -->
   <section id="uploader" aria-label="Carregar planilha">
     <!-- input fora da label para evitar diálogo duplo -->
@@ -245,6 +250,7 @@ function showToast(msg){
   showToast._t = setTimeout(()=>{ el.style.display='none'; }, 1700);
 }
 function toggleMenu(id){
+  // fecha outros
   document.querySelectorAll('.menu-dropdown-content').forEach(el=>{
     if(el.id !== id){ el.style.display='none'; el.style.opacity=0; }
   });
@@ -400,38 +406,109 @@ function copiarTabelaAtiva(){
   navigator.clipboard.writeText(tsv).then(()=>showToast('Copiado!')).catch(()=>showToast('Não foi possível copiar.'));
 }
 
-/* ========= imprimir ========= */
+/* ========= impressão: escala e impressão em 1 página ========= */
 function hasConteudoImprimivel(){
   if(!currentWB) return false;
   const ativa = document.querySelector('.sheet.active table');
   if(!ativa) return false;
   return ativa.querySelector('td,th') !== null;
 }
-function imprimirAtual(){
+
+function prepareAndPrintSinglePage(){
   if(!hasConteudoImprimivel()){ showToast('Nada para imprimir.'); return; }
-  window.print();
+
+  const body = document.body;
+  const wrapper = document.getElementById('main-wrapper');
+
+  // 1) esconder UI desnecessária durante medição
+  body.classList.add('preparing-print');
+
+  // 2) criar referência A4 em mm para descobrir px
+  const mmEl = document.createElement('div');
+  mmEl.style.position = 'absolute';
+  mmEl.style.left = '-99999px';
+  mmEl.style.width = '210mm';
+  mmEl.style.height = '297mm';
+  document.body.appendChild(mmEl);
+  const pagePxW = mmEl.offsetWidth || 210 * 3.78;
+  const pagePxH = mmEl.offsetHeight || 297 * 3.78;
+  document.body.removeChild(mmEl);
+
+  // margens (deixar coerente com @page)
+  const marginMm = 10; // 10mm como no CSS
+  const marginPx = Math.round(pagePxW * (marginMm / 210));
+  const availW = Math.max(10, pagePxW - marginPx*2);
+  const availH = Math.max(10, pagePxH - marginPx*2);
+
+  // 3) reset transform e medir
+  const prevTransform = wrapper.style.transform || '';
+  const prevTransformOrigin = wrapper.style.transformOrigin || '';
+  wrapper.style.transform = '';
+  wrapper.style.transformOrigin = '';
+
+  // let layout settle
+  setTimeout(()=>{
+    const contentW = wrapper.scrollWidth || wrapper.offsetWidth || wrapper.clientWidth;
+    const contentH = wrapper.scrollHeight || wrapper.offsetHeight || wrapper.clientHeight;
+
+    const scaleW = contentW > 0 ? (availW / contentW) : 1;
+    const scaleH = contentH > 0 ? (availH / contentH) : 1;
+    let scale = Math.min(scaleW, scaleH, 1);
+
+    if(!isFinite(scale) || scale <= 0) scale = 1;
+    if(scale < 0.30) scale = 0.30; // evita ficar ilegível
+
+    // aplica escala
+    wrapper.style.transformOrigin = 'top left';
+    wrapper.style.transform = `scale(${scale})`;
+
+    // marca no html/body que aplicamos escala (ajuda no print CSS)
+    document.documentElement.classList.add('print-scaled');
+    document.body.classList.add('print-scaled');
+
+    // guarda overflow e evita scrollbars no preview
+    const prevOverflow = document.documentElement.style.overflow || '';
+    document.documentElement.style.overflow = 'hidden';
+
+    // cleanup
+    const cleanup = () => {
+      wrapper.style.transform = prevTransform;
+      wrapper.style.transformOrigin = prevTransformOrigin;
+      body.classList.remove('preparing-print');
+      document.documentElement.classList.remove('print-scaled');
+      document.body.classList.remove('print-scaled');
+      document.documentElement.style.overflow = prevOverflow;
+      try{ window.removeEventListener('afterprint', cleanup); }catch(e){}
+    };
+
+    // afterprint handler
+    try { window.addEventListener('afterprint', cleanup); } catch(e){ /* ignore */ }
+
+    // chama print
+    setTimeout(() => {
+      window.print();
+      // fallback cleanup caso afterprint não dispare
+      setTimeout(cleanup, 1500);
+    }, 150);
+
+  }, 60);
 }
 
 /* ========= reset (fazer com outro) ========= */
 function resetViewer(){
-  // limpa DOM
   tabs.innerHTML = '';
   sheets.innerHTML = '';
-  // limpa estado
   currentWB = null; activeSheetName = null;
   document.getElementById('nome-arquivo').textContent = '—';
   document.getElementById('titulo').textContent = 'Visualizador de Planilhas (.ods)';
   statusEl.textContent = 'Pronto.';
-  // limpa input
   try{ fileInput.value = ''; }catch(e){}
-  // volta para uploader
   viewer.style.display = 'none';
   uploader.style.display = 'block';
 }
 
 /* ========= acessibilidade/UX ========= */
 document.addEventListener('keydown', (e)=>{
-  // ESC fecha dropdowns
   if(e.key === 'Escape'){ fecharTodosMenus(); }
 });
 </script>
