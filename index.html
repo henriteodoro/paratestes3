@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Visualizador ODS — estilo MAC</title>
 
-<!-- SheetJS: lê .ods/.xlsx no navegador -->
+<!-- SheetJS: lê .ods/.xlsx/.xls/.csv no navegador -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
 <style>
@@ -73,18 +73,19 @@
   /* ===== uploader (drag & drop) ===== */
   #uploader{ margin-top:8px; }
   .dropzone{
-    display:block; width:100%;
+    /* centralização total do conteúdo */
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    width:100%;
     border:2px dashed var(--azul);
-    border-radius:12px; padding:28px; text-align:center;
+    border-radius:12px; padding:20px; text-align:center;
     background:var(--cinza); color:#0b305a;
-    cursor:pointer; user-select:none;
-    transition:.15s ease;
-    min-height:160px;
+    cursor:pointer; user-select:none; transition:.15s ease;
+    min-height:200px;  /* mais alto para “encaixar” melhor o texto */
   }
   .dropzone .title{ font-weight:700; margin-bottom:6px; font-size:14px; }
   .dropzone .hint{ font-size:12px; opacity:.8; }
   .dropzone.dragover{ background:#eef6ff; border-style:solid; transform:scale(1.01); }
-  /* esconde input, fica fora da label para evitar clique duplo */
+  /* esconde input (fora da label para evitar diálogo duplo) */
   #file-input{ position:absolute; left:-9999px; width:1px; height:1px; opacity:0; }
 
   /* ===== viewer ===== */
@@ -128,7 +129,7 @@
   .btn-primaria{ background:#e8f2ff; border-color:#cfe2ff; color:#0b305a; }
   .btn-perigo{ background:var(--vermelho); color:#fff; border:none; }
 
-  /* aviso/Toast (reaproveita o "Copiado!") */
+  /* aviso/Toast */
   #copy-notice{
     position: fixed; right: 18px; bottom: 18px;
     background: rgba(0,0,0,0.84); color: white;
@@ -136,14 +137,29 @@
     display: none; z-index: 2000; font-size:12px;
   }
 
-  /* ===== impressão ===== */
+  /* ===== impressão (focar em 1 página e evitar página em branco) ===== */
   @media print{
-    header, .menu-dropdown-content, #uploader, #copy-notice, .viewer-footer .btn { display:none !important; }
-    body, html { background:#fff; }
-    .wrap{ padding:0; max-width:none; }
-    .sheet{ padding:0; }
-    .sheet table{ font-size:10px; }
-    @page{ size:A4 portrait; margin:10mm; }
+    /* esconder tudo que não é conteúdo */
+    header, .menu-dropdown-content, #uploader, #copy-notice,
+    .viewer-footer, .tabs, .actions-top { display:none !important; }
+
+    html, body { background:#fff; height:auto !important; }
+    @page{ size:A4 portrait; margin:8mm; }
+
+    .wrap{ padding:0 !important; max-width:none !important; margin:0 !important; }
+    .sheets{ overflow:visible !important; border:none !important; }
+    .sheet{ padding:0 !important; margin:0 !important; }
+    .sheet table{ font-size:10px !important; border-collapse:collapse !important; }
+    .sheet th, .sheet td{ padding:2px 3px !important; }
+
+    /* garantir que só a aba ativa imprima */
+    .sheet{ display:none !important; }
+    .sheet.active{ display:block !important; }
+
+    /* leve redução global -> ajuda a evitar 2ª página vazia por arredondamentos */
+    body{ zoom:0.98; } /* Chrome/Edge */
+    /* fallback para outros navegadores: */
+    body{ -webkit-transform:scale(0.98); transform:scale(0.98); -webkit-transform-origin:top left; transform-origin:top left; }
   }
 </style>
 </head>
@@ -389,7 +405,6 @@ function hasConteudoImprimivel(){
   if(!currentWB) return false;
   const ativa = document.querySelector('.sheet.active table');
   if(!ativa) return false;
-  // se tabela tiver pelo menos 1 célula útil
   return ativa.querySelector('td,th') !== null;
 }
 function imprimirAtual(){
