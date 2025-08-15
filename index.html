@@ -19,7 +19,7 @@
     --texto:#111;
   }
   *{ box-sizing:border-box; }
-  html,body{ height:100%; }
+  html,body{ height:100% }
   body{
     font-family: monospace;
     margin:0; padding:0;
@@ -47,14 +47,11 @@
   }
   .icon-btn:hover{ background:rgba(255,255,255,.08) }
 
-  /* dropdowns: left menu aligns left, right menu aligns right */
+  /* dropdowns */
   .menu-dropdown{ position:relative; }
-  .menu-left .menu-dropdown-content { left: 0; right: auto; }
-  .menu-right .menu-dropdown-content { right: 0; left: auto; }
-
   .menu-dropdown-content{
     display:none; position:absolute; top:calc(100% + 6px);
-    background:#fff; color:#111; border-radius:6px;
+    right:0; background:#fff; color:#111; border-radius:6px;
     box-shadow:0 6px 18px rgba(0,0,0,.15);
     min-width:190px; overflow:auto; z-index:1200; padding:6px 0;
   }
@@ -70,25 +67,24 @@
   }
   .titulo-nav h1{ margin:0; font-size:18px; color:#111; }
 
-  /* ===== wrapper (usado para escala antes da impressão) ===== */
-  #main-wrapper.wrap{ max-width:1100px; margin:0 auto; padding:8px 14px 28px; }
+  /* ===== layout geral ===== */
+  .wrap{ max-width:1100px; margin:0 auto; padding:8px 14px 28px; }
 
   /* ===== uploader (drag & drop) ===== */
   #uploader{ margin-top:8px; }
   .dropzone{
-    /* centralização total do conteúdo */
     display:flex; flex-direction:column; align-items:center; justify-content:center;
-    width:100%;
+    gap:6px; width:100%;
     border:2px dashed var(--azul);
     border-radius:12px; padding:28px; text-align:center;
     background:var(--cinza); color:#0b305a;
-    cursor:pointer; user-select:none; transition:.15s ease;
-    min-height:200px;
+    cursor:pointer; user-select:none;
+    transition:.15s ease;
+    min-height:180px;
   }
   .dropzone .title{ font-weight:700; margin-bottom:6px; font-size:14px; }
   .dropzone .hint{ font-size:12px; opacity:.8; }
   .dropzone.dragover{ background:#eef6ff; border-style:solid; transform:scale(1.01); }
-  /* input fora da label para evitar diálogo duplo */
   #file-input{ position:absolute; left:-9999px; width:1px; height:1px; opacity:0; }
 
   /* ===== viewer ===== */
@@ -132,7 +128,7 @@
   .btn-primaria{ background:#e8f2ff; border-color:#cfe2ff; color:#0b305a; }
   .btn-perigo{ background:var(--vermelho); color:#fff; border:none; }
 
-  /* aviso/Toast (reaproveita o "Copiado!") */
+  /* aviso/Toast */
   #copy-notice{
     position: fixed; right: 18px; bottom: 18px;
     background: rgba(0,0,0,0.84); color: white;
@@ -140,31 +136,28 @@
     display: none; z-index: 2000; font-size:12px;
   }
 
-  /* ===== impressão (estilos gerais) =====
-     Observação: a função JS 'prepareAndPrintSinglePage' aplica escala ao
-     #main-wrapper para garantir que tudo caiba em UMA página.
-  */
+  /* ===== impressão ===== */
   @media print{
-    header, .menu-dropdown-content, #uploader, #copy-notice, .viewer-footer .btn, .menu-left .icon-btn, .menu-right .icon-btn { display:none !important; }
-    body, html { background:#fff; }
-    #main-wrapper.wrap{ padding:0 !important; max-width:none !important; margin:0 !important; }
-    .sheets{ overflow:visible !important; border:none !important; }
-    .sheet{ padding:0 !important; margin:0 !important; }
-    .sheet table{ font-size:10px !important; border-collapse:collapse !important; }
-    .sheet th, .sheet td{ padding:3px 4px !important; }
-    .tabs, .actions-top, .viewer-footer { display:none !important; }
-    /* tentativa extra para evitar 2ª página vazia por arredondamentos:
-       reduz pequena escala em engines que respeitam zoom (Chrome/Edge). */
-    html.print-scaled, body.print-scaled { zoom:0.98; -webkit-print-color-adjust:exact; }
+    /* esconde controles */
+    header, .menu-dropdown-content, #uploader, #copy-notice, .viewer-footer .btn { display:none !important; }
+
+    /* evita segunda página: altura natural e nada de overflow “preso” */
+    html, body { background:#fff; height:auto !important; overflow:visible !important; }
+
+    /* não deixar padding/margens empurrarem conteúdo */
+    .wrap{ padding:0; max-width:none; page-break-after:avoid; break-after:avoid-page; }
+    .titulo-nav{ margin:0 0 6px 0; }
+
+    .sheet{ padding:0; }
+    .sheets{ border:none; }
+
+    /* tipografia na impressão */
+    .sheet table{ font-size:10px; page-break-inside:auto; }
+    .sheet tr, .sheet td, .sheet th{ page-break-inside:avoid; break-inside:avoid; }
+
+    /* tamanho da página e margens internas (não remove cabeç./rodapés do navegador) */
     @page{ size:A4 portrait; margin:10mm; }
   }
-
-  /* classe para esconder elementos enquanto medimos via JS */
-  body.preparing-print header,
-  body.preparing-print #uploader,
-  body.preparing-print .menu-dropdown-content,
-  body.preparing-print .tabs,
-  body.preparing-print .viewer-footer { display:none !important; }
 </style>
 </head>
 <body>
@@ -194,7 +187,7 @@
         <a href="#" onclick="exportarJSON();fecharTodosMenus();return false;">Salvar como JSON</a>
       </div>
     </div>
-    <button class="icon-btn" id="btn-print" title="Imprimir (🖨️)" onclick="prepareAndPrintSinglePage()">🖨️</button>
+    <button class="icon-btn" id="btn-print" title="Imprimir (🖨️)" onclick="imprimirAtual()">🖨️</button>
     <button class="icon-btn" id="btn-copy" title="Copiar (📋)" onclick="copiarTabelaAtiva()">📋</button>
   </div>
 </header>
@@ -204,11 +197,9 @@
   <h1 id="titulo">Visualizador de Planilhas (.ods)</h1>
 </div>
 
-<!-- MAIN WRAPPER: a escala para impressão será aplicada aqui -->
-<div id="main-wrapper" class="wrap">
+<div class="wrap">
   <!-- ===== Uploader ===== -->
   <section id="uploader" aria-label="Carregar planilha">
-    <!-- input fora da label para evitar diálogo duplo -->
     <input id="file-input" type="file" accept=".ods,.xlsx,.xls,.csv" />
     <label class="dropzone" id="dropzone" for="file-input">
       <div class="title">Arraste e solte seu arquivo .ods aqui</div>
@@ -229,6 +220,7 @@
     <div class="viewer-footer">
       <div class="status" id="status">Pronto.</div>
       <div style="display:flex; gap:8px; align-items:center;">
+        <!-- O botão Ordenar A–Z será injetado aqui automaticamente após o arquivo carregar -->
         <button class="btn" onclick="exportarCSVAtivo()" title="Salvar CSV da aba atual">Salvar CSV (aba ativa)</button>
         <button class="btn" onclick="exportarXLSX()" title="Salvar arquivo completo em XLSX">Salvar XLSX</button>
         <button class="btn" onclick="exportarJSON()" title="Salvar todas as abas em JSON">Salvar JSON</button>
@@ -250,7 +242,6 @@ function showToast(msg){
   showToast._t = setTimeout(()=>{ el.style.display='none'; }, 1700);
 }
 function toggleMenu(id){
-  // fecha outros
   document.querySelectorAll('.menu-dropdown-content').forEach(el=>{
     if(el.id !== id){ el.style.display='none'; el.style.opacity=0; }
   });
@@ -272,6 +263,8 @@ function voltarMenu(){ showToast('Voltar ao menu (configure o redirecionamento).
 let currentWB = null;         // workbook carregado
 let currentFileName = null;   // nome do arquivo
 let activeSheetName = null;   // aba ativa
+let originalSheetsAOA = {};    // snapshot AOA por aba (para restaurar)
+let sortedSheets = new Set();  // abas atualmente ordenadas
 
 /* ========= elementos ========= */
 const uploader = document.getElementById('uploader');
@@ -298,6 +291,9 @@ fileInput.addEventListener('change', (e)=>{
 /* ========= processamento ========= */
 function processFile(file){
   statusEl.textContent = 'Lendo arquivo...';
+  // reseta estados de ordenação ao abrir novo arquivo
+  originalSheetsAOA = {};
+  sortedSheets = new Set();
   currentFileName = file.name;
   document.getElementById('titulo').textContent = `Visualizador de Planilhas — ${currentFileName}`;
   document.getElementById('nome-arquivo').textContent = currentFileName;
@@ -309,7 +305,6 @@ function processFile(file){
       const wb = XLSX.read(data, { type:'array' }); // suporta .ods/.xlsx
       currentWB = wb;
       renderWorkbook(wb);
-      // troca para modo viewer
       uploader.style.display = 'none';
       viewer.style.display   = 'block';
       statusEl.textContent   = `Carregado: ${file.name} (${wb.SheetNames.length} aba${wb.SheetNames.length>1?'s':''})`;
@@ -330,15 +325,16 @@ function renderWorkbook(wb){
   tabs.style.display   = 'flex';
 
   wb.SheetNames.forEach((name, idx)=>{
-    // cria botão da aba
     const btn = document.createElement('button');
     btn.className = 'tab-btn';
     btn.textContent = name || `Aba ${idx+1}`;
     btn.addEventListener('click', ()=> setActiveSheet(name));
     tabs.appendChild(btn);
 
-    // cria painel da planilha com html do SheetJS
     const ws = wb.Sheets[name];
+    // snapshot da matriz original (AOA) para restaurar depois
+    const __aoa = XLSX.utils.sheet_to_json(ws, { header:1 });
+    originalSheetsAOA[name] = __aoa.map(r => Array.isArray(r) ? r.slice() : []);
     const html = XLSX.utils.sheet_to_html(ws, { id:`sheet-${idx}`, header:'', footer:'' });
 
     const pane = document.createElement('div');
@@ -349,18 +345,20 @@ function renderWorkbook(wb){
   });
 
   setActiveSheet(wb.SheetNames[0]);
+
+  // 👉 injeta o botão de ordenação somente após o arquivo ser processado
+  injectSortButton();
 }
 
 function setActiveSheet(name){
   activeSheetName = name;
-  // ativo visual nas abas
   document.querySelectorAll('.tab-btn').forEach(btn=>{
     btn.classList.toggle('active', btn.textContent === name);
   });
-  // mostrar/esconder painéis
   document.querySelectorAll('.sheet').forEach(p=>{
     p.classList.toggle('active', p.dataset.name === name);
   });
+  updateSortButtonLabel();
 }
 
 /* ========= exportações ========= */
@@ -406,92 +404,16 @@ function copiarTabelaAtiva(){
   navigator.clipboard.writeText(tsv).then(()=>showToast('Copiado!')).catch(()=>showToast('Não foi possível copiar.'));
 }
 
-/* ========= impressão: escala e impressão em 1 página ========= */
+/* ========= imprimir ========= */
 function hasConteudoImprimivel(){
   if(!currentWB) return false;
   const ativa = document.querySelector('.sheet.active table');
   if(!ativa) return false;
   return ativa.querySelector('td,th') !== null;
 }
-
-function prepareAndPrintSinglePage(){
+function imprimirAtual(){
   if(!hasConteudoImprimivel()){ showToast('Nada para imprimir.'); return; }
-
-  const body = document.body;
-  const wrapper = document.getElementById('main-wrapper');
-
-  // 1) esconder UI desnecessária durante medição
-  body.classList.add('preparing-print');
-
-  // 2) criar referência A4 em mm para descobrir px
-  const mmEl = document.createElement('div');
-  mmEl.style.position = 'absolute';
-  mmEl.style.left = '-99999px';
-  mmEl.style.width = '210mm';
-  mmEl.style.height = '297mm';
-  document.body.appendChild(mmEl);
-  const pagePxW = mmEl.offsetWidth || 210 * 3.78;
-  const pagePxH = mmEl.offsetHeight || 297 * 3.78;
-  document.body.removeChild(mmEl);
-
-  // margens (deixar coerente com @page)
-  const marginMm = 10; // 10mm como no CSS
-  const marginPx = Math.round(pagePxW * (marginMm / 210));
-  const availW = Math.max(10, pagePxW - marginPx*2);
-  const availH = Math.max(10, pagePxH - marginPx*2);
-
-  // 3) reset transform e medir
-  const prevTransform = wrapper.style.transform || '';
-  const prevTransformOrigin = wrapper.style.transformOrigin || '';
-  wrapper.style.transform = '';
-  wrapper.style.transformOrigin = '';
-
-  // let layout settle
-  setTimeout(()=>{
-    const contentW = wrapper.scrollWidth || wrapper.offsetWidth || wrapper.clientWidth;
-    const contentH = wrapper.scrollHeight || wrapper.offsetHeight || wrapper.clientHeight;
-
-    const scaleW = contentW > 0 ? (availW / contentW) : 1;
-    const scaleH = contentH > 0 ? (availH / contentH) : 1;
-    let scale = Math.min(scaleW, scaleH, 1);
-
-    if(!isFinite(scale) || scale <= 0) scale = 1;
-    if(scale < 0.30) scale = 0.30; // evita ficar ilegível
-
-    // aplica escala
-    wrapper.style.transformOrigin = 'top left';
-    wrapper.style.transform = `scale(${scale})`;
-
-    // marca no html/body que aplicamos escala (ajuda no print CSS)
-    document.documentElement.classList.add('print-scaled');
-    document.body.classList.add('print-scaled');
-
-    // guarda overflow e evita scrollbars no preview
-    const prevOverflow = document.documentElement.style.overflow || '';
-    document.documentElement.style.overflow = 'hidden';
-
-    // cleanup
-    const cleanup = () => {
-      wrapper.style.transform = prevTransform;
-      wrapper.style.transformOrigin = prevTransformOrigin;
-      body.classList.remove('preparing-print');
-      document.documentElement.classList.remove('print-scaled');
-      document.body.classList.remove('print-scaled');
-      document.documentElement.style.overflow = prevOverflow;
-      try{ window.removeEventListener('afterprint', cleanup); }catch(e){}
-    };
-
-    // afterprint handler
-    try { window.addEventListener('afterprint', cleanup); } catch(e){ /* ignore */ }
-
-    // chama print
-    setTimeout(() => {
-      window.print();
-      // fallback cleanup caso afterprint não dispare
-      setTimeout(cleanup, 1500);
-    }, 150);
-
-  }, 60);
+  window.print();
 }
 
 /* ========= reset (fazer com outro) ========= */
@@ -499,10 +421,13 @@ function resetViewer(){
   tabs.innerHTML = '';
   sheets.innerHTML = '';
   currentWB = null; activeSheetName = null;
+  originalSheetsAOA = {}; sortedSheets = new Set();
   document.getElementById('nome-arquivo').textContent = '—';
   document.getElementById('titulo').textContent = 'Visualizador de Planilhas (.ods)';
   statusEl.textContent = 'Pronto.';
   try{ fileInput.value = ''; }catch(e){}
+  const btnSort = document.getElementById('btn-sort-az');
+  if(btnSort) btnSort.remove(); // remove o botão ao voltar
   viewer.style.display = 'none';
   uploader.style.display = 'block';
 }
@@ -511,6 +436,84 @@ function resetViewer(){
 document.addEventListener('keydown', (e)=>{
   if(e.key === 'Escape'){ fecharTodosMenus(); }
 });
+
+/* ========= ORDENAR A–Z (injetado só após carregar) ========= */
+function injectSortButton(){
+  if(document.getElementById('btn-sort-az')) return; // não duplica
+  const container = document.querySelector('.viewer-footer > div:last-of-type');
+  if(!container) return;
+  const b = document.createElement('button');
+  b.className = 'btn';
+  b.id = 'btn-sort-az';
+  b.title = 'Ordenar linhas da aba atual (A→Z) pela 1ª coluna';
+  b.textContent = 'Ordenar A–Z (1ª coluna)';
+  b.addEventListener('click', toggleSortSheetAtiva);
+  const btnOutro = document.getElementById('btn-outro');
+  container.insertBefore(b, btnOutro || null);
+  updateSortButtonLabel();
+}
+
+function updateSortButtonLabel(){
+  const b = document.getElementById('btn-sort-az');
+  if(!b){ return; }
+  const sorted = sortedSheets.has(activeSheetName);
+  b.textContent = sorted ? 'Restaurar ordem original' : 'Ordenar A–Z (1ª coluna)';
+  b.title = sorted ? 'Voltar à ordem original da aba atual' : 'Ordenar linhas da aba atual (A→Z) pela 1ª coluna';
+}
+
+function toggleSortSheetAtiva(){
+  if(!currentWB || !activeSheetName){ showToast('Nenhuma aba ativa.'); return; }
+
+  // garante snapshot da aba ativa
+  if(!originalSheetsAOA[activeSheetName]){
+    const ws0 = currentWB.Sheets[activeSheetName];
+    const aoa0 = XLSX.utils.sheet_to_json(ws0, { header:1 });
+    originalSheetsAOA[activeSheetName] = aoa0.map(r => Array.isArray(r) ? r.slice() : []);
+  }
+
+  const isSorted = sortedSheets.has(activeSheetName);
+
+  let novoWS;
+  if(isSorted){
+    // RESTAURAR
+    const base = originalSheetsAOA[activeSheetName].map(r => r.slice());
+    novoWS = XLSX.utils.aoa_to_sheet(base);
+    sortedSheets.delete(activeSheetName);
+    statusEl.textContent = `Ordem original restaurada na aba "${activeSheetName}"`;
+    showToast('Ordem original restaurada.');
+  }else{
+    // ORDENAR A–Z pela 1ª coluna, preservando cabeçalho
+    const base = originalSheetsAOA[activeSheetName];
+    if(base.length <= 1){ showToast('Nada para ordenar.'); return; }
+    const header = base[0].slice();
+    const linhas = base.slice(1).map(r => r.slice());
+
+    const collator = new Intl.Collator('pt', { sensitivity:'base', numeric:true });
+    const norm = v => (v ?? '').toString().trim();
+    linhas.sort((a,b)=>{
+      const A = norm(a[0]);
+      const B = norm(b[0]);
+      if(!A && !B) return 0;
+      if(!A) return 1;
+      if(!B) return -1;
+      return collator.compare(A, B);
+    });
+    const novaMatriz = [header, ...linhas];
+    novoWS = XLSX.utils.aoa_to_sheet(novaMatriz);
+    sortedSheets.add(activeSheetName);
+    statusEl.textContent = `Ordenado A–Z por 1ª coluna na aba "${activeSheetName}"`;
+    showToast('Ordenado com sucesso!');
+  }
+
+  // aplica na planilha e re-renderiza a aba ativa
+  currentWB.Sheets[activeSheetName] = novoWS;
+  const idx = currentWB.SheetNames.indexOf(activeSheetName);
+  const html = XLSX.utils.sheet_to_html(novoWS, { id:`sheet-${idx}`, header:'', footer:'' });
+  const pane = document.querySelector(`.sheet[data-name="${CSS.escape(activeSheetName)}"]`);
+  if(pane) pane.innerHTML = html;
+
+  updateSortButtonLabel();
+}
 </script>
 </body>
 </html>
